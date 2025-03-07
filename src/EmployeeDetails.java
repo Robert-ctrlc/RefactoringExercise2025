@@ -432,7 +432,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end lastRecord
 
 	// search Employee by ID
-	public void searchEmployeeById() {
+	public void searchEmployeeById(int id) {
 		boolean found = false;
 
 		try {// try to read correct correct from input
@@ -477,7 +477,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end searchEmployeeByID
 
 	// search Employee by surname
-	public void searchEmployeeBySurname() {
+	public void searchEmployeeBySurname(String surname) {
 		boolean found = false;
 		// if any active Employee record search for ID else do nothing
 		if (isSomeoneToDisplay()) {
@@ -1002,9 +1002,9 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 			if (checkInput() && !checkForChanges())
 				displaySearchBySurnameDialog();
 		} else if (e.getSource() == searchId || e.getSource() == searchByIdField)
-			searchEmployeeById();
+		searchEmployeeById(Integer.parseInt(searchByIdField.getText().trim()));
 		else if (e.getSource() == searchSurname || e.getSource() == searchBySurnameField)
-			searchEmployeeBySurname();
+		searchEmployeeBySurname(searchBySurnameField.getText().trim());
 		else if (e.getSource() == saveChange) {
 			if (checkInput() && !checkForChanges())
 				;
