@@ -31,6 +31,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -701,61 +702,65 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		return anyChanges;
 	}// end checkForChanges
 
-	// check for input in text fields
+	// Check for input in text fields
 	private boolean checkInput() {
 		boolean valid = true;
-		// if any of inputs are in wrong format, colour text field and display
-		// message
-		if (ppsField.isEditable() && ppsField.getText().trim().isEmpty()) {
-			ppsField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (ppsField.isEditable() && correctPps(ppsField.getText().trim(), currentByteStart)) {
-			ppsField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (surnameField.isEditable() && surnameField.getText().trim().isEmpty()) {
-			surnameField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (firstNameField.isEditable() && firstNameField.getText().trim().isEmpty()) {
-			firstNameField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (genderCombo.getSelectedIndex() == 0 && genderCombo.isEnabled()) {
-			genderCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (departmentCombo.getSelectedIndex() == 0 && departmentCombo.isEnabled()) {
-			departmentCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		try {// try to get values from text field
-			Double.parseDouble(salaryField.getText());
-			// check if salary is greater than 0
-			if (Double.parseDouble(salaryField.getText()) < 0) {
-				salaryField.setBackground(new Color(255, 150, 150));
-				valid = false;
-			} // end if
-		} // end try
-		catch (NumberFormatException num) {
-			if (salaryField.isEditable()) {
-				salaryField.setBackground(new Color(255, 150, 150));
-				valid = false;
-			} // end if
-		} // end catch
-		if (fullTimeCombo.getSelectedIndex() == 0 && fullTimeCombo.isEnabled()) {
-			fullTimeCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-			// display message if any input or format is wrong
+
+		valid &= validateTextField(ppsField, ppsField.isEditable(), "PPS");
+		valid &= validateTextField(surnameField, surnameField.isEditable(), "Surname");
+		valid &= validateTextField(firstNameField, firstNameField.isEditable(), "First Name");
+		valid &= validateComboBox(genderCombo, "Gender");
+		valid &= validateComboBox(departmentCombo, "Department");
+		valid &= validateComboBox(fullTimeCombo, "Full Time");
+		valid &= validateSalaryField();
+
 		if (!valid)
 			JOptionPane.showMessageDialog(null, "Wrong values or format! Please check!");
-		// set text field to white colour if text fields are editable
+
 		if (ppsField.isEditable())
 			setToWhite();
 
 		return valid;
+	}
+
+	// Validate text fields
+	private boolean validateTextField(JTextField field, boolean isEditable, String fieldName) {
+		if (isEditable && field.getText().trim().isEmpty()) {
+			highlightField(field);
+			return false;
+		}
+		return true;
+	}
+
+	// Validate combo boxes
+	private boolean validateComboBox(JComboBox<String> comboBox, String fieldName) {
+		if (comboBox.getSelectedIndex() == 0 && comboBox.isEnabled()) {
+			highlightField(comboBox);
+			return false;
+		}
+		return true;
+	}
+
+	// Validate salary field separately
+	private boolean validateSalaryField() {
+		try {
+			double salary = Double.parseDouble(salaryField.getText());
+			if (salary < 0) {
+				highlightField(salaryField);
+				return false;
+			}
+		} catch (NumberFormatException e) {
+			if (salaryField.isEditable()) {
+				highlightField(salaryField);
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// generic method to highlight invalid fields
+	private void highlightField(JComponent component) {
+		component.setBackground(new Color(255, 150, 150));
 	}
 
 	// set text field background colour to white
