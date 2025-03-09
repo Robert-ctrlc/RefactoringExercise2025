@@ -1,138 +1,97 @@
-/*
- * 
- * This is the summary dialog for displaying all Employee details
- * 
- * */
-
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.util.Vector;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.*;
+import javax.swing.table.*;
 
 import net.miginfocom.swing.MigLayout;
 
-public class EmployeeSummaryDialog extends JDialog implements ActionListener {
-	// vector with all Employees details
-	Vector<Object> allEmployees;
-	JButton back;
-	
-	public EmployeeSummaryDialog(Vector<Object> allEmployees) {
-		setTitle("Employee Summary");
-		setModal(true);
-		this.allEmployees = allEmployees;
+public class EmployeeSummaryDialog extends JDialog {
+    private static final String[] HEADER_NAMES = { 
+        "ID", "PPS Number", "Surname", "First Name", "Gender", "Department", "Salary", "Full Time" 
+    };
+    private static final int[] COLUMN_WIDTHS = { 15, 100, 120, 120, 50, 120, 80, 80 };
 
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    private JButton back;
+    private JTable employeeTable;
 
-		JScrollPane scrollPane = new JScrollPane(summaryPane());
-		setContentPane(scrollPane);
+    public EmployeeSummaryDialog(Vector<Object> allEmployees) {
+        setTitle("Employee Summary");
+        setModal(true);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-		setSize(850, 500);
-		setLocation(350, 250);
-		setVisible(true);
+        // Initialize components
+        JScrollPane scrollPane = new JScrollPane(createEmployeeTable(allEmployees));
+        JPanel buttonPanel = createButtonPanel();
 
-	}
-	// initialise container
-	public Container summaryPane() {
-		JPanel summaryDialog = new JPanel(new MigLayout());
-		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-		JTable employeeTable;
-		DefaultTableModel tableModel;
-		// column center alignment
-		DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-		// column left alignment 
-		DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
-		Vector<String> header = new Vector<String>();
-		// header names
-		String[] headerName = { "ID", "PPS Number", "Surname", "First Name", "Gender", "Department", "Salary",
-				"Full Time" };
-		// column widths
-		int[] colWidth = { 15, 100, 120, 120, 50, 120, 80, 80 };
-		centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-		leftRenderer.setHorizontalAlignment(JLabel.LEFT);
-		// add headers
-		for (int i = 0; i < headerName.length; i++) {
-			header.addElement(headerName[i]);
-		}// end for
-		// construnct table and choose table model for each column
-		tableModel = new DefaultTableModel() {
-			public Class getColumnClass(int c) {
-				switch (c) {
-				case 0:
-					return Integer.class;
-				case 4:
-					return Character.class;
-				case 6:
-					return Double.class;
-				case 7:
-					return Boolean.class;
-				default:
-					return String.class;
-				}// end switch
-			}// end getColumnClass
-		};
+        // Layout
+        JPanel summaryDialog = new JPanel(new MigLayout());
+        summaryDialog.add(buttonPanel, "growx, pushx, wrap");
+        summaryDialog.add(scrollPane, "growx, pushx, wrap");
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Employee Details"));
 
-		employeeTable = new JTable(tableModel);
-		// add header names to table
-		for (int i = 0; i < employeeTable.getColumnCount(); i++) {
-			employeeTable.getColumn(headerName[i]).setMinWidth(colWidth[i]);
-		}// end for
-		// set alignments
-		employeeTable.getColumnModel().getColumn(0).setCellRenderer(leftRenderer);
-		employeeTable.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
-		employeeTable.getColumnModel().getColumn(6).setCellRenderer(new DecimalFormatRenderer());
+        setContentPane(summaryDialog);
+        setSize(850, 500);
+        setLocationRelativeTo(null); 
+        setVisible(true);
+    }
 
-		employeeTable.setEnabled(false);
-		employeeTable.setPreferredScrollableViewportSize(new Dimension(800, (15 * employeeTable.getRowCount() + 15)));
-		employeeTable.setAutoCreateRowSorter(true);
-		JScrollPane scrollPane = new JScrollPane(employeeTable);
+    // Creates the employee table
+    private JScrollPane createEmployeeTable(Vector<Object> allEmployees) {
+        DefaultTableModel tableModel = new DefaultTableModel(HEADER_NAMES, 0) {
+            public Class<?> getColumnClass(int column) {
+                return switch (column) {
+                    case 0 -> Integer.class;
+                    case 4 -> Character.class;
+                    case 6 -> Double.class;
+                    case 7 -> Boolean.class;
+                    default -> String.class;
+                };
+            }
+        };
 
-		buttonPanel.add(back = new JButton("Back"));
-		back.addActionListener(this);
-		back.setToolTipText("Return to main screen");
-		
-		summaryDialog.add(buttonPanel,"growx, pushx, wrap");
-		summaryDialog.add(scrollPane,"growx, pushx, wrap");
-		scrollPane.setBorder(BorderFactory.createTitledBorder("Employee Details"));
-		
-		return summaryDialog;
-	}// end summaryPane
+        employeeTable = new JTable(tableModel);
+        employeeTable.setEnabled(false);
+        employeeTable.setAutoCreateRowSorter(true);
+        employeeTable.setPreferredScrollableViewportSize(new Dimension(800, 15 * allEmployees.size() + 15));
 
-	public void actionPerformed(ActionEvent e) {
-		if (e.getSource() == back){
-			dispose();
-		}
+        setupTableColumns(employeeTable);
+        fillTableWithData(tableModel, allEmployees);
 
-	}
-	// format for salary column
-	static class DecimalFormatRenderer extends DefaultTableCellRenderer {
-		 private static final DecimalFormat format = new DecimalFormat(
-		 "\u20ac ###,###,##0.00" );
+        return new JScrollPane(employeeTable);
+    }
 
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-				int row, int column) {
+    // Configures table column widths & alignment
+    private void setupTableColumns(JTable table) {
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        leftRenderer.setHorizontalAlignment(JLabel.LEFT);
 
-			Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-			 JLabel label = (JLabel) c;
-			 label.setHorizontalAlignment(JLabel.RIGHT);
-			 // format salary column
-			value = format.format((Number) value);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            TableColumn column = table.getColumnModel().getColumn(i);
+            column.setMinWidth(COLUMN_WIDTHS[i]);
+            if (i == 0) column.setCellRenderer(leftRenderer);
+            if (i == 4) column.setCellRenderer(centerRenderer);
+            if (i == 6) column.setCellRenderer(new TableUtils.DecimalFormatRenderer());
+        }
+    }
 
-			return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-		}// end getTableCellRendererComponent
-	}// DefaultTableCellRenderer
-}// end class EmployeeSummaryDialog
+    // Fills the table with employee data
+    private void fillTableWithData(DefaultTableModel model, Vector<Object> employees) {
+        for (Object empData : employees) {
+            model.addRow((Vector<?>) empData);
+        }
+    }
+
+    // Creates the button panel
+    private JPanel createButtonPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        back = new JButton("Back");
+        back.setToolTipText("Return to main screen");
+        back.addActionListener(e -> dispose());
+        panel.add(back);
+        return panel;
+    }
+}

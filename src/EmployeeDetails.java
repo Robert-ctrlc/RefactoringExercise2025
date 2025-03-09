@@ -25,6 +25,7 @@ import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.Vector;
+import java.util.function.Predicate;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -434,98 +435,64 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		} // end if
 	}// end lastRecord
 
-	// search Employee by ID
-	public void searchEmployeeById(int id) {
-		boolean found = false;
-	
-		try {
-			if (!isSomeoneToDisplay()) return;
-	
-			firstRecord();
-			int firstId = currentEmployee.getEmployeeId();
-			String searchId = searchByIdField.getText().trim();
-	
-			if (searchId.equals(idField.getText().trim()) || searchId.equals(Integer.toString(currentEmployee.getEmployeeId()))) {
-				found = true;
-				displayRecords(currentEmployee);
-			} else {
-				nextRecord();
-				while (firstId != currentEmployee.getEmployeeId()) {
-					if (Integer.parseInt(searchId) == currentEmployee.getEmployeeId()) {
-						found = true;
-						displayRecords(currentEmployee);
-						break;
-					} else {
-						nextRecord();
-					}
-				}
-			}
-	
-			if (!found) JOptionPane.showMessageDialog(null, "Employee not found!");
-		} catch (NumberFormatException e) {
-			highlightField(searchByIdField);
-			JOptionPane.showMessageDialog(null, "Wrong ID format!");
-		}
-		resetSearchField(searchByIdField);
-	}
+// Generic search method that searches based on a given condition
+private boolean searchEmployee(Predicate<Employee> condition, JTextField searchField) {
+    boolean found = false;
 
-	private void resetSearchField(JTextField field) {
-		field.setBackground(Color.WHITE);
-		field.setText("");
-	}
+    if (!isSomeoneToDisplay()) return false;
 
-	// search Employee by surname
-	public void searchEmployeeBySurname(String surname) {
-		boolean found = false;
-		// if any active Employee record search for ID else do nothing
-		if (isSomeoneToDisplay()) {
-			firstRecord();// look for first record
-			String firstSurname = currentEmployee.getSurname().trim();
-			// if ID to search is already displayed do nothing else loop through
-			// records
-			if (searchBySurnameField.getText().trim().equalsIgnoreCase(surnameField.getText().trim()))
-				found = true;
-			else if (searchBySurnameField.getText().trim().equalsIgnoreCase(currentEmployee.getSurname().trim())) {
-				found = true;
-				displayRecords(currentEmployee);
-			} // end else if
-			else {
-				nextRecord();// look for next record
-				// loop until Employee found or until all Employees have been
-				// checked
-				while (!firstSurname.trim().equalsIgnoreCase(currentEmployee.getSurname().trim())) {
-					// if found break from loop and display Employee details
-					// else look for next record
-					if (searchBySurnameField.getText().trim().equalsIgnoreCase(currentEmployee.getSurname().trim())) {
-						found = true;
-						displayRecords(currentEmployee);
-						break;
-					} // end if
-					else
-						nextRecord();// look for next record
-				} // end while
-			} // end else
-				// if Employee not found display message
-			if (!found)
-				JOptionPane.showMessageDialog(null, "Employee not found!");
-		} // end if
-		searchBySurnameField.setText("");
-	}// end searchEmployeeBySurname
+    firstRecord();
+    Employee firstEmployee = currentEmployee;
+
+    if (condition.test(currentEmployee)) {
+        found = true;
+        displayRecords(currentEmployee);
+    } else {
+        nextRecord();
+        while (!currentEmployee.equals(firstEmployee)) {
+            if (condition.test(currentEmployee)) {
+                found = true;
+                displayRecords(currentEmployee);
+                break;
+            } else {
+                nextRecord();
+            }
+        }
+    }
+
+    if (!found) JOptionPane.showMessageDialog(null, "Employee not found!");
+    resetSearchField(searchField);
+    return found;
+}
+
+// Refactored search by ID using searchEmployee() method
+public void searchEmployeeById(int id) {
+    try {
+        searchEmployee(emp -> emp.getEmployeeId() == id, searchByIdField);
+    } catch (NumberFormatException e) {
+        highlightField(searchByIdField);
+        JOptionPane.showMessageDialog(null, "Wrong ID format!");
+    }
+}
+
+// Refactored search by surname using searchEmployee() method
+public void searchEmployeeBySurname(String surname) {
+    searchEmployee(emp -> emp.getSurname().equalsIgnoreCase(surname), searchBySurnameField);
+}
+
+// Helper method to reset search fields after search
+private void resetSearchField(JTextField field) {
+    field.setBackground(Color.WHITE);
+    field.setText("");
+}
 
 	// get next free ID from Employees in the file
 	public int getNextFreeId() {
-		int nextFreeId = 0;
-		// if file is empty or all records are empty start with ID 1 else look
-		// for last active record
-		if (file.length() == 0 || !isSomeoneToDisplay())
-			nextFreeId++;
-		else {
-			lastRecord();// look for last active record
-			// add 1 to last active records ID to get next ID
-			nextFreeId = currentEmployee.getEmployeeId() + 1;
-		}
-		return nextFreeId;
-	}// end getNextFreeId
+		if (file.length() == 0 || !isSomeoneToDisplay()) return 1;
+		
+		lastRecord();
+		return currentEmployee.getEmployeeId() + 1;
+	}
 
 	// get values from text fields and create Employee object
 	private Employee getChangedDetails() {
@@ -612,9 +579,13 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// ignore changes and set text field unenabled
 	private void cancelChange() {
+		resetForm();
+	}
+	
+	private void resetForm() {
 		setEnabled(false);
 		displayRecords(currentEmployee);
-	}// end cancelChange
+	}
 
 	// check if any of records in file is active - ID is not 0
 	private boolean isSomeoneToDisplay() {
@@ -696,7 +667,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end checkForChanges
 
 	// Check for input in text fields
-	private boolean checkInput() {
+	public boolean checkInput() {
 		boolean valid = true;
 
 		valid &= validateTextField(ppsField, ppsField.isEditable(), "PPS");
