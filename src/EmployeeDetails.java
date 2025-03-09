@@ -437,47 +437,42 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	// search Employee by ID
 	public void searchEmployeeById(int id) {
 		boolean found = false;
-
-		try {// try to read correct correct from input
-				// if any active Employee record search for ID else do nothing
-			if (isSomeoneToDisplay()) {
-				firstRecord();// look for first record
-				int firstId = currentEmployee.getEmployeeId();
-				// if ID to search is already displayed do nothing else loop
-				// through records
-				if (searchByIdField.getText().trim().equals(idField.getText().trim()))
-					found = true;
-				else if (searchByIdField.getText().trim().equals(Integer.toString(currentEmployee.getEmployeeId()))) {
-					found = true;
-					displayRecords(currentEmployee);
-				} // end else if
-				else {
-					nextRecord();// look for next record
-					// loop until Employee found or until all Employees have
-					// been checked
-					while (firstId != currentEmployee.getEmployeeId()) {
-						// if found break from loop and display Employee details
-						// else look for next record
-						if (Integer.parseInt(searchByIdField.getText().trim()) == currentEmployee.getEmployeeId()) {
-							found = true;
-							displayRecords(currentEmployee);
-							break;
-						} else
-							nextRecord();// look for next record
-					} // end while
-				} // end else
-					// if Employee not found display message
-				if (!found)
-					JOptionPane.showMessageDialog(null, "Employee not found!");
-			} // end if
-		} // end try
-		catch (NumberFormatException e) {
-			searchByIdField.setBackground(new Color(255, 150, 150));
+	
+		try {
+			if (!isSomeoneToDisplay()) return;
+	
+			firstRecord();
+			int firstId = currentEmployee.getEmployeeId();
+			String searchId = searchByIdField.getText().trim();
+	
+			if (searchId.equals(idField.getText().trim()) || searchId.equals(Integer.toString(currentEmployee.getEmployeeId()))) {
+				found = true;
+				displayRecords(currentEmployee);
+			} else {
+				nextRecord();
+				while (firstId != currentEmployee.getEmployeeId()) {
+					if (Integer.parseInt(searchId) == currentEmployee.getEmployeeId()) {
+						found = true;
+						displayRecords(currentEmployee);
+						break;
+					} else {
+						nextRecord();
+					}
+				}
+			}
+	
+			if (!found) JOptionPane.showMessageDialog(null, "Employee not found!");
+		} catch (NumberFormatException e) {
+			highlightField(searchByIdField);
 			JOptionPane.showMessageDialog(null, "Wrong ID format!");
-		} // end catch
-		searchByIdField.setBackground(Color.WHITE);
-		searchByIdField.setText("");
-	}// end searchEmployeeByID
+		}
+		resetSearchField(searchByIdField);
+	}
+
+	private void resetSearchField(JTextField field) {
+		field.setBackground(Color.WHITE);
+		field.setText("");
+	}
 
 	// search Employee by surname
 	public void searchEmployeeBySurname(String surname) {
@@ -556,28 +551,24 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		application.closeWriteFile();// close file for writing
 	}// end addRecord
 
-	// delete (make inactive - empty) record from file
+	
 	private void deleteRecord() {
-		if (isSomeoneToDisplay()) {// if any active record in file display
-									// message and delete record
-			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to delete record?", "Delete",
-					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-			// if answer yes delete (make inactive - empty) record
-			if (returnVal == JOptionPane.YES_OPTION) {
-				// open file for writing
-				application.openWriteFile(file.getAbsolutePath());
-				// delete (make inactive - empty) record in file proper position
-				application.deleteRecords(currentByteStart);
-				application.closeWriteFile();// close file for writing
-				// if any active record in file display next record
-				if (isSomeoneToDisplay()) {
-					nextRecord();// look for next record
-					displayRecords(currentEmployee);
-				} // end if
-			} // end if
-		} // end if
-	}// end deleteDecord
-
+		if (!isSomeoneToDisplay()) return; 
+	
+		int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to delete record?", "Delete",
+				JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
+		
+		if (returnVal != JOptionPane.YES_OPTION) return; 
+	
+		application.openWriteFile(file.getAbsolutePath());
+		application.deleteRecords(currentByteStart);
+		application.closeWriteFile();
+	
+		if (isSomeoneToDisplay()) {
+			nextRecord();
+			displayRecords(currentEmployee);
+		}
+	}
 	// create vector of vectors with all Employee details
 	private Vector<Object> getAllEmloyees() {
 		// vector of Employee objects
@@ -777,26 +768,26 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end setToWhite
 
 	// enable text fields for editing
-	public void setEnabled(boolean booleanValue) {
-		boolean search;
-		if (booleanValue)
-			search = false;
-		else
-			search = true;
-		ppsField.setEditable(booleanValue);
-		surnameField.setEditable(booleanValue);
-		firstNameField.setEditable(booleanValue);
-		genderCombo.setEnabled(booleanValue);
-		departmentCombo.setEnabled(booleanValue);
-		salaryField.setEditable(booleanValue);
-		fullTimeCombo.setEnabled(booleanValue);
-		saveChange.setVisible(booleanValue);
-		cancelChange.setVisible(booleanValue);
-		searchByIdField.setEnabled(search);
-		searchBySurnameField.setEnabled(search);
-		searchId.setEnabled(search);
-		searchSurname.setEnabled(search);
-	}// end setEnabled
+	public void setEnabled(boolean isEditable) {
+		boolean searchEnabled = !isEditable;
+	
+		setComponentState(isEditable, ppsField, surnameField, firstNameField, salaryField);
+		setComponentState(isEditable, genderCombo, departmentCombo, fullTimeCombo);
+		setComponentState(isEditable, saveChange, cancelChange);
+		setComponentState(searchEnabled, searchByIdField, searchBySurnameField, searchId, searchSurname);
+	}
+	
+	private void setComponentState(boolean state, JComponent... components) {
+		for (JComponent component : components) {
+			if (component instanceof JTextField) {
+				((JTextField) component).setEditable(state);
+			} else if (component instanceof JComboBox) {
+				component.setEnabled(state);
+			} else {
+				component.setVisible(state);
+			}
+		}
+	}
 
 
 	// save changes to current Employee
@@ -839,42 +830,29 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		return currentByteStart;
 	}
 	// allow to save changes to file when exiting the application
+	private void deleteGeneratedFile() {
+		if (file.getName().equals(generatedFileName)) {
+			file.delete();
+		}
+	}
+	
 	private void exitApp() {
-		// if file is not empty allow to save changes
-		if (file.length() != 0) {
-			if (changesMade) {
-				int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
-						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-				// if user chooses to save file, save file
-				if (returnVal == JOptionPane.YES_OPTION) {
-					fileManager.saveFile(this, changesMade);// save file
-					// delete generated file if user saved details to other file
-					if (file.getName().equals(generatedFileName))
-						file.delete();// delete file
-					System.exit(0);// exit application
-				} // end if
-					// else exit application
-				else if (returnVal == JOptionPane.NO_OPTION) {
-					// delete generated file if user chooses not to save file
-					if (file.getName().equals(generatedFileName))
-						file.delete();// delete file
-					System.exit(0);// exit application
-				} // end else if
-			} // end if
-			else {
-				// delete generated file if user chooses not to save file
-				if (file.getName().equals(generatedFileName))
-					file.delete();// delete file
-				System.exit(0);// exit application
-			} // end else
-				// else exit application
+		if (file.length() != 0 && changesMade) {
+			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
+					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
+			if (returnVal == JOptionPane.YES_OPTION) {
+				fileManager.saveFile(this, changesMade);
+				deleteGeneratedFile();
+				System.exit(0);
+			} else if (returnVal == JOptionPane.NO_OPTION) {
+				deleteGeneratedFile();
+				System.exit(0);
+			}
 		} else {
-			// delete generated file if user chooses not to save file
-			if (file.getName().equals(generatedFileName))
-				file.delete();// delete file
-			System.exit(0);// exit application
-		} // end else
-	}// end exitApp
+			deleteGeneratedFile();
+			System.exit(0);
+		}
+	}
 
 	// generate 20 character long file name
 	private String getFileName() {
